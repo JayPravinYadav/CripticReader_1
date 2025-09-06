@@ -82,26 +82,20 @@ int main() {
     }
     }
 
+    std::vector<double> Log_nH;
+    std::vector<double> Temperatures;
+    std::vector<std::vector<double>> Mu_grid_slice;
 
-
-    //Calculating the Temperature from the eqn ((gamma-1)*energy density= rho*k_B*T/ mu(n_H,T)*m_p)
-    std::vector<double> Temperatures=read_vector_csv(home + "/Temperature.csv");
-    if (Temperatures.empty()) {
-        std::cerr << "Failed to read Temperature.csv.\n";
-        return {};
+    try {
+        read_merged_csv("merged_table.csv", Log_nH, Temperatures, Mu_grid_slice);
+        std::cout << "Read merged CSV successfully.\n";
+        std::cout << "Temperatures size = " << Temperatures.size() << "\n";
+        std::cout << "log_nH size = " << Log_nH.size() << "\n";
+        std::cout << "Mu_grid size = " << Mu_grid_slice.size()
+                  << " x " << (Mu_grid_slice.empty() ? 0 : Mu_grid_slice[0].size()) << "\n";
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << "\n";
     }
-    std::vector<double> Log_nH=read_vector_csv(home + "/log10_nH.csv");
-    if (Log_nH.empty()) {
-        std::cerr << "Failed to read log10_nH.csv.\n";
-        return {};
-    }
-    std::vector<std::vector<double>> Mu_grid_slice= read_matrix_csv(home + "/mu_slice_z0.csv");
-    if (Mu_grid_slice.empty()) {
-        std::cerr << "Failed to read mu_slice_z0.csv.\n";
-        return {};
-    }
-    std::cout << "mu_slice_z0 loaded successfully.\n";
-
     auto mu = make_mu_interpolator(Log_nH, Temperatures, Mu_grid_slice);
 
     auto residual = [=](double rho, double T, double e_int) -> double {
@@ -111,6 +105,7 @@ int main() {
 
         return ((2.0/3.0) * e_int * mu_val * m_p) / (rho * k_B * T) - T;
     };
+
 
     std::vector<std::vector<std::vector<double>>> Temperature(std::vector<std::vector<std::vector<double>>>(hinfo.global_nx, std::vector<std::vector<double>>(hinfo.global_ny, std::vector<double>(hinfo.global_nz, 0.0))));
     std::vector<std::vector<std::vector<double>>> relative_electron_density(hinfo.global_nx, std::vector<std::vector<double>>(hinfo.global_ny, std::vector<double>(hinfo.global_nz, 0.0)));

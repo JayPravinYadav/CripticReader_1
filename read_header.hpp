@@ -352,6 +352,8 @@ void print_var_value_at_coordinates(const std::vector<std::vector<std::vector<st
         std::cout << "Magnetic field_y (in Gauss) at (" << x << ", " << y << ", " << z << "): ";
     } else if (var_index==16) {
         std::cout << "Magnetic field_z (in Gauss) at (" << x << ", " << y << ", " << z << "): ";
+    } else if (var_index==17) {
+        std::cout << "Ionized Mass Density (in g/cm^3) at (" << x << ", " << y << ", " << z << "): ";
     } else {
         std::cerr << "Unknown variable index.\n";
         return;
@@ -501,6 +503,8 @@ void validate(const std::vector<std::vector<std::vector<std::vector<double>>>>& 
             var_name = "Magnetic Field_y (G)";
         } else if (var == 16) {
             var_name = "Magnetic Field_z (G)";
+        } else if (var == 17) {
+            var_name = "Ionized Mass Density (g/cm^3)";
         } else {
             var_name = "Unknown Variable";
         }
@@ -581,6 +585,51 @@ std::vector<std::vector<double>> read_matrix_csv(const std::string& filename) {
 
     return matrix;
 }
+// Function to read the merged CSV
+void read_merged_csv(const std::string& filename,
+                     std::vector<double>& log_nH,
+                     std::vector<double>& Temperatures,
+                     std::vector<std::vector<double>>& Mu_grid) {
+    std::ifstream file(filename);
+    std::string line;
+
+    // --- Read header row (temperatures) ---
+    if (std::getline(file, line)) {
+        std::stringstream ss(line);
+        std::string val;
+        bool first = true;
+        while (std::getline(ss, val, ',')) {
+            if (first) {
+                // Skip the first entry ("log_nH / T")
+                first = false;
+                continue;
+            }
+            Temperatures.push_back(std::stod(val));
+        }
+    }
+
+    // --- Read the rest (log_nH + mu grid) ---
+    while (std::getline(file, line)) {
+        std::stringstream ss(line);
+        std::string val;
+        std::vector<double> row;
+
+        // First value is log_nH
+        if (std::getline(ss, val, ',')) {
+            log_nH.push_back(std::stod(val));
+        }
+
+        // Remaining values are mu grid row
+        while (std::getline(ss, val, ',')) {
+            row.push_back(std::stod(val));
+        }
+
+        Mu_grid.push_back(row);
+    }
+
+    file.close();
+}
+
 
 void write_3D_slice(const std::vector<std::vector<std::vector<double>>>& array3d,
                          const std::string& filename) {
@@ -632,7 +681,11 @@ void write_phys_var_to_multi_csv(const std::vector<std::vector<std::vector<std::
         else if (var==14) var_name = "Magnetic_field_x";
         else if (var==15) var_name = "Magnetic_field_y";
         else if (var==16) var_name = "Magnetic_field_z";
-
+        else if (var==17) var_name = "Ionized_mass_density";
+        else {
+            std::cerr << "Unknown variable index: " << var << "\n";
+            continue; // Skip unknown variables
+        }
         // Write different csv files for each variable
         write_3D_slice(phys_var[var], plt_filename + "_" + var_name + ".csv");
     }
